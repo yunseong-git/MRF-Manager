@@ -1,4 +1,5 @@
 import { userModel } from "./user/userModel";
-import { adminModel } from "./admin/adminModel";
+import { userAuthModel } from "./user/userAuthModel";
+import { adminAuthModel } from "./admin/adminAuthModel";
 
-export const models = [new userModel(), new adminModel()];
+export const models = [new userAuthModel(), new adminAuthModel(), new userModel()];

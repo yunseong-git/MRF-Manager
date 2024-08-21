@@ -3,7 +3,8 @@ import { models } from "../../models";
 export class authController {
     constructor() {
         this.userModel = new models.userModel()
-        this.adminModel = new models.adminModel();
+        this.userAuthModel = new models.userAuthModel()
+        this.adminAuthModel = new models.adminAuthModel();
     }
 
     // 로그인 처리
@@ -15,9 +16,10 @@ export class authController {
                 //추후 로직 추가 예정
             }
             else { //유저 로그인
-                const user = await this.userModel.login(id, password);
-                if (user) {
-                    res.status(200).json({ message: "환영합니다", user });
+                await this.userAuthModel.checkUser(id, password);
+                const token = await this.userAuthModel.createTokens(id)
+                if (token) {
+                    res.status(200).json(token);
                 } else {
                     res.status(401).json({ message: "잘못된 정보입니다. 다시 입력해주세요" });
                 }
@@ -28,10 +30,22 @@ export class authController {
         }
     }
 
-    // 로그아웃 처리
-    async logout(req, res, next) {
+    //회원가입
+    async registUser(req, res, next) {
         try {
-            res.status(200).json({ message: "로그아웃 되었습니다." });
+            const { id, password, name, birthDate } = req.body;
+
+            if (await this.userModel.searchUserById(id)) {//관리자 로그인
+                res.status(401).json({ message: "이미 존재하는 회원정보입니다. ID를 확인해주세요." });
+            }
+            else { 
+                const user = await this.userAuthModel.createUser(id, password, name, birthDate);
+                if (user) {
+                    res.status(200).json({ message: "회원가입이 완료되었습니다. 해당 정보로 로그인해주세요." });
+                } else {
+                    res.status(401).json({ message: "회원가입 중 오류가 발생하였습니다. 다시 시도해주세요" });
+                }
+            }
         } catch (err) {
             next(err);
         }
@@ -46,8 +60,7 @@ export class authController {
         }
     }
 
-    // 회원가입 처리
-    async registerUser(req, res, next) {
+    async deleteUser(req, res, next) {
         try {
             const { id, name, birthDate, password } = req.body;
             const user = await this.userModel.register(id, name, birthDate, password);
@@ -64,21 +77,21 @@ export class authController {
     // 비밀번호 변경 처리
     async findId(req, res, next) {
         try {
-            const {name, birthDate} = req.body;
+            const { name, birthDate } = req.body;
             const user = await this.userModel.findUserId(name, birthDate);
             if (user) {
                 res.status(201).json({ message: "회원님의 ID는 ", user });
             } else {
                 res.status(400).json({ message: "존재하지 않는 회원정보입니다." });
             }
-        } catch (err) { 
+        } catch (err) {
             next(err);
         }
     }
 
     async resetPassword(req, res, next) {
         try {
-            const {id, name, birthDate} = req.body;
+            const { id, name, birthDate } = req.body;
             const user = await this.userModel.checkUser(id, name, birthDate);
             if (user) {
                 const reset = await this.userModel.updatePassword(id, name, birthDate);
@@ -94,7 +107,7 @@ export class authController {
     // 비밀번호 변경 처리
     async updatePassword(req, res, next) {
         try {
-            const {id, password} = req.body;
+            const { id, password } = req.body;
             res.status(200).json({ message: "비밀번호가 변경되었습니다." });
         } catch (err) {
             next(err);
